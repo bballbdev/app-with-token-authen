@@ -56,7 +56,8 @@ namespace AppWithTokenAuthen.Providers
 
         public override Task GrantResourceOwnerCredentials(OAuthGrantResourceOwnerCredentialsContext context)
         {
-            if (!_entities.User.Any(a => a.Username == context.UserName && a.Password == context.Password))
+            var user = _entities.User.Where(a => a.Username == context.UserName && a.Password == context.Password).FirstOrDefault();
+            if (user == null)
             {
                 // check valid user login
                 context.SetError("invalid_grant", "The username or password is incorrect.");
@@ -81,7 +82,10 @@ namespace AppWithTokenAuthen.Providers
             ClaimsIdentity claimsIdentity = new ClaimsIdentity(context.Options.AuthenticationType, TokenClaim.userName, TokenClaim.role);
             claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Jti, access_token_guid));
             claimsIdentity.AddClaim(new Claim(TokenClaim.userName, context.UserName));
-            claimsIdentity.AddClaim(new Claim(TokenClaim.role, "user"));
+            foreach (var role in user.User_Role)
+            {
+                claimsIdentity.AddClaim(new Claim(TokenClaim.role, role.Role));
+            }
 
 
             var dictionaryItem = new Dictionary<string, string>();
