@@ -42,11 +42,8 @@ namespace AppWithTokenAuthen.Controllers
         public IHttpActionResult UserInfo()
         {
             var identity = (ClaimsIdentity)User.Identity;
-
-            var claims = identity.Claims.ToList();
             
-            
-            return Ok("Hello Secret Content");
+            return Ok($"Hello {identity.Name}");
         }
 
         [TokenAuthorize(Roles = Roles.admin), HttpPost]
@@ -54,10 +51,7 @@ namespace AppWithTokenAuthen.Controllers
         {
             var identity = (ClaimsIdentity)User.Identity;
 
-            var claims = identity.Claims.ToList();
-            
-            
-            return Ok("Hello Secret Content");
+            return Ok($"Hello Admin {identity.Name}");
         }
     }
 }

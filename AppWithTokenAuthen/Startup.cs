@@ -38,12 +38,12 @@ namespace AppWithTokenAuthen
             return httpConfiguration;
         }
 
-        public static void RegisterTokenIssuer(IAppBuilder app)
+        private static void RegisterTokenIssuer(IAppBuilder app)
         {
             // setup for generating token (jwt format) to use for access content
 
             string accessTokenValidMinute = WebConfigurationManager.AppSettings["Access_Token_Minute"] ?? "0";
-            string tokenIssuer = WebConfigurationManager.AppSettings["Access_Token_Minute"];
+            string tokenIssuer = WebConfigurationManager.AppSettings["Token_Issuer"];
 
             OAuthAuthorizationServerOptions options = new OAuthAuthorizationServerOptions
             {
@@ -58,7 +58,7 @@ namespace AppWithTokenAuthen
             app.UseOAuthAuthorizationServer(options);
         }
 
-        public static void RegisterTokenAudience(IAppBuilder app)
+        private static void RegisterTokenAudience(IAppBuilder app)
         {
             // setup for receiving and validating token (jwt format)
 
@@ -76,6 +76,8 @@ namespace AppWithTokenAuthen
                     ValidIssuer = tokenIssuer,
                     //ValidAudience = "http://mysite.com",
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretString)),
+                    NameClaimType = TokenClaim.userName,
+                    RoleClaimType = TokenClaim.role
                 }
             };
 
