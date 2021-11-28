@@ -5,6 +5,17 @@
     <!-- SSDL content -->
     <edmx:StorageModels>
     <Schema Namespace="MyAppModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+        <EntityType Name="Refresh_Token">
+          <Key>
+            <PropertyRef Name="Refresh_Token_Id" />
+            <PropertyRef Name="Username" />
+          </Key>
+          <Property Name="Refresh_Token_Id" Type="varchar" MaxLength="50" Nullable="false" />
+          <Property Name="Refresh_Token" Type="varchar(max)" Nullable="false" />
+          <Property Name="Username" Type="varchar" MaxLength="200" Nullable="false" />
+          <Property Name="Issued_At_Utc" Type="datetime" Nullable="false" />
+          <Property Name="Expired_At_Utc" Type="datetime" Nullable="false" />
+        </EntityType>
         <EntityType Name="Token_Audience">
           <Key>
             <PropertyRef Name="Client_Id" />
@@ -21,9 +32,35 @@
           <Property Name="Username" Type="varchar" MaxLength="200" Nullable="false" />
           <Property Name="Password" Type="varchar" MaxLength="200" Nullable="false" />
         </EntityType>
+        <EntityType Name="User_Role">
+          <Key>
+            <PropertyRef Name="User_Id" />
+            <PropertyRef Name="Role" />
+          </Key>
+          <Property Name="User_Id" Type="int" Nullable="false" />
+          <Property Name="Role" Type="varchar" MaxLength="20" Nullable="false" />
+        </EntityType>
+        <Association Name="FK_User_Role_User">
+          <End Role="User" Type="Self.User" Multiplicity="1" />
+          <End Role="User_Role" Type="Self.User_Role" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="User">
+              <PropertyRef Name="User_Id" />
+            </Principal>
+            <Dependent Role="User_Role">
+              <PropertyRef Name="User_Id" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
         <EntityContainer Name="MyAppModelStoreContainer">
+          <EntitySet Name="Refresh_Token" EntityType="Self.Refresh_Token" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Token_Audience" EntityType="Self.Token_Audience" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="User" EntityType="Self.User" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="User_Role" EntityType="Self.User_Role" Schema="dbo" store:Type="Tables" />
+          <AssociationSet Name="FK_User_Role_User" Association="Self.FK_User_Role_User">
+            <End Role="User" EntitySet="User" />
+            <End Role="User_Role" EntitySet="User_Role" />
+          </AssociationSet>
         </EntityContainer>
       </Schema></edmx:StorageModels>
     <!-- CSDL content -->
@@ -32,6 +69,12 @@
         <EntityContainer Name="MyAppEntities" annotation:LazyLoadingEnabled="true" >
           <EntitySet Name="User" EntityType="MyAppModel.User" />
           <EntitySet Name="Token_Audience" EntityType="MyAppModel.Token_Audience" />
+          <EntitySet Name="User_Role" EntityType="MyAppModel.User_Role" />
+          <AssociationSet Name="FK_User_Role_User" Association="MyAppModel.FK_User_Role_User">
+            <End Role="User" EntitySet="User" />
+            <End Role="User_Role" EntitySet="User_Role" />
+          </AssociationSet>
+          <EntitySet Name="Refresh_Token" EntityType="MyAppModel.Refresh_Token" />
         </EntityContainer>
         <EntityType Name="User">
           <Key>
@@ -40,6 +83,7 @@
           <Property Name="User_Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
           <Property Name="Username" Type="String" Nullable="false" MaxLength="200" FixedLength="false" Unicode="false" />
           <Property Name="Password" Type="String" Nullable="false" MaxLength="200" FixedLength="false" Unicode="false" />
+          <NavigationProperty Name="User_Role" Relationship="MyAppModel.FK_User_Role_User" FromRole="User" ToRole="User_Role" />
         </EntityType>
         <EntityType Name="Token_Audience">
           <Key>
@@ -48,6 +92,38 @@
           <Property Name="Client_Id" Type="String" Nullable="false" MaxLength="200" FixedLength="false" Unicode="false" />
           <Property Name="Client_Secret" Type="String" Nullable="false" MaxLength="200" FixedLength="false" Unicode="false" />
           <Property Name="Description" Type="String" MaxLength="Max" FixedLength="false" Unicode="false" />
+        </EntityType>
+        <EntityType Name="User_Role">
+          <Key>
+            <PropertyRef Name="User_Id" />
+            <PropertyRef Name="Role" />
+          </Key>
+          <Property Name="User_Id" Type="Int32" Nullable="false" />
+          <Property Name="Role" Type="String" Nullable="false" MaxLength="20" FixedLength="false" Unicode="false" />
+          <NavigationProperty Name="User" Relationship="MyAppModel.FK_User_Role_User" FromRole="User_Role" ToRole="User" />
+        </EntityType>
+        <Association Name="FK_User_Role_User">
+          <End Type="MyAppModel.User" Role="User" Multiplicity="1" />
+          <End Type="MyAppModel.User_Role" Role="User_Role" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="User">
+              <PropertyRef Name="User_Id" />
+            </Principal>
+            <Dependent Role="User_Role">
+              <PropertyRef Name="User_Id" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <EntityType Name="Refresh_Token">
+          <Key>
+            <PropertyRef Name="Refresh_Token_Id" />
+            <PropertyRef Name="Username" />
+          </Key>
+          <Property Name="Refresh_Token_Id" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="Refresh_Token1" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="false" />
+          <Property Name="Username" Type="String" Nullable="false" MaxLength="200" FixedLength="false" Unicode="false" />
+          <Property Name="Issued_At_Utc" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="Expired_At_Utc" Type="DateTime" Nullable="false" Precision="3" />
         </EntityType>
       </Schema>
     </edmx:ConceptualModels>
@@ -70,6 +146,25 @@
                 <ScalarProperty Name="Description" ColumnName="Description" />
                 <ScalarProperty Name="Client_Secret" ColumnName="Client_Secret" />
                 <ScalarProperty Name="Client_Id" ColumnName="Client_Id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="User_Role">
+            <EntityTypeMapping TypeName="MyAppModel.User_Role">
+              <MappingFragment StoreEntitySet="User_Role">
+                <ScalarProperty Name="Role" ColumnName="Role" />
+                <ScalarProperty Name="User_Id" ColumnName="User_Id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Refresh_Token">
+            <EntityTypeMapping TypeName="MyAppModel.Refresh_Token">
+              <MappingFragment StoreEntitySet="Refresh_Token">
+                <ScalarProperty Name="Expired_At_Utc" ColumnName="Expired_At_Utc" />
+                <ScalarProperty Name="Issued_At_Utc" ColumnName="Issued_At_Utc" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="Refresh_Token1" ColumnName="Refresh_Token" />
+                <ScalarProperty Name="Refresh_Token_Id" ColumnName="Refresh_Token_Id" />
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>

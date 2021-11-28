@@ -1,4 +1,5 @@
 ﻿using AppWithTokenAuthen.Attributes;
+using AppWithTokenAuthen.Constants;
 using AppWithTokenAuthen.Database;
 using System;
 using System.Collections.Generic;
@@ -37,8 +38,19 @@ namespace AppWithTokenAuthen.Controllers
             return Ok();
         }
 
-        [TokenAuthorize(Roles = "admin,user,president"), HttpPost]
+        [TokenAuthorize(), HttpPost]
         public IHttpActionResult UserInfo()
+        {
+            var identity = (ClaimsIdentity)User.Identity;
+
+            var claims = identity.Claims.ToList();
+            
+            
+            return Ok("Hello Secret Content");
+        }
+
+        [TokenAuthorize(Roles = Roles.admin), HttpPost]
+        public IHttpActionResult AdminInfo()
         {
             var identity = (ClaimsIdentity)User.Identity;
 

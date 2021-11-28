@@ -1,4 +1,5 @@
-﻿using Microsoft.Owin.Security.Infrastructure;
+﻿using AppWithTokenAuthen.Database;
+using Microsoft.Owin.Security.Infrastructure;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,86 +12,73 @@ namespace AppWithTokenAuthen.Providers
 {
     public class RefreshTokenProvider : IAuthenticationTokenProvider
     {
-        //4.login/5.RefreshToken After Login Or Refresh Token Generate Next Token and Store
-        public async Task CreateAsync(AuthenticationTokenCreateContext context)
+        private readonly MyAppEntities _entities;
+
+        public RefreshTokenProvider()
         {
-            //refresh token generation logic inside method “CreateAsync”,
+            if (_entities == null)
+                _entities = new MyAppEntities();
+        }
+
+
+
+        public Task CreateAsync(AuthenticationTokenCreateContext context)
+        {
             var userName = context.Ticket.Properties.Dictionary["as:userName"];
             if (string.IsNullOrEmpty(userName))
-                return;
+                return Task.FromResult<object>(null);
 
-            var guid = context.Ticket.Properties.Dictionary["as:guid"];
-            if (string.IsNullOrEmpty(guid))
-                return;
+            var access_token_guid = context.Ticket.Properties.Dictionary["as:access_token_guid"];
+            if (string.IsNullOrEmpty(access_token_guid))
+                return Task.FromResult<object>(null);
 
-            //We are generating a unique identifier for the refresh token
+
+
             var refreshTokenId = Guid.NewGuid().ToString("n");
+            var refreshToken = context.SerializeTicket();
 
-
-            //Then we are reading the refresh token life time value from the Owin context where we set this value once we validate the client,
-            //this value will be used to determine how long the refresh token will be valid for,
-            //this should be in minutes.
             var refreshTokenMinute = WebConfigurationManager.AppSettings["Refresh_Token_Minute"];
 
             var IssuedUtc = DateTime.UtcNow;
-            var ExpiresUtc = DateTime.UtcNow.AddMinutes(Convert.ToDouble(refreshTokenMinute));
+            var ExpiredUtc = DateTime.UtcNow.AddMinutes(Convert.ToDouble(refreshTokenMinute));
+
+            // create refresh token into db
+            _entities.Refresh_Token.Add(new Refresh_Token()
+            {
+                Refresh_Token_Id = refreshTokenId,
+                Refresh_Token1 = refreshToken,
+                Username = userName,
+                Issued_At_Utc = IssuedUtc,
+                Expired_At_Utc = ExpiredUtc
+            });
+            _entities.SaveChanges();
+
 
             context.Ticket.Properties.IssuedUtc = IssuedUtc;
-            context.Ticket.Properties.ExpiresUtc = ExpiresUtc;
+            context.Ticket.Properties.ExpiresUtc = ExpiredUtc;
 
-            //serialize the ticket content and we’ll be able to store this magical serialized string on the database
-            var NewToken = context.SerializeTicket();
-            //ID => Subject (User) and the Client unique key
-            //if it not unique I’ll delete the existing one and store new refresh token.
-            //It is better to hash the refresh token identifier before storing it,
-            //so if anyone has access to the database he’ll not see the real refresh tokens
-            //var autofac = context.OwinContext.GetAutofacLifetimeScope();
-            //var refreshTokenRepo = autofac.Resolve<IRefreshTokenRepo>();
-            //var result = refreshTokenRepo.Create(token);
-            //if (result != null)
-            //{
-            //    //Lastly we will send back the refresh token id (without hashing it) in the response body.
-            //    context.SetToken(refreshTokenId);
-            //}
-            //await Task.FromResult(true);
-
-            context.SetToken(NewToken);
+            context.SetToken(refreshTokenId);
+            return Task.FromResult<object>(null);
         }
 
-        //2.RefreshToken  Active Refresh Token in Token Store
-        public async Task ReceiveAsync(AuthenticationTokenReceiveContext context)
+        public Task ReceiveAsync(AuthenticationTokenReceiveContext context)
         {
-            context.DeserializeTicket(context.Token);
+            string refreshTokenId = context.Token;
+            string refreshToken = _entities.Refresh_Token
+                                            .Where(w => w.Refresh_Token_Id == refreshTokenId && w.Expired_At_Utc > DateTime.UtcNow)
+                                            .Select(s => s.Refresh_Token1)
+                                            .FirstOrDefault();
+
+            if (!string.IsNullOrWhiteSpace(refreshToken))
+            {
+                context.DeserializeTicket(refreshToken);
+                // remove used refresh token
+                _entities.Refresh_Token.Remove(_entities.Refresh_Token.Where(w => w.Refresh_Token1 == refreshToken).FirstOrDefault());
+                _entities.SaveChanges();
+            }
 
 
-
-            //string hashedTokenId = GetHash(context.Token);
-
-            //var autofac = context.OwinContext.GetAutofacLifetimeScope();
-            //var refreshTokenRepo = autofac.Resolve<IRefreshTokenRepo>();
-            //var refreshToken = refreshTokenRepo.Filter(x => x.NewTokenKey == hashedTokenId).FirstOrDefault();
-
-            //if (refreshToken != null && refreshToken.ExpiresUtc > DateTime.UtcNow)
-            //{
-            //    //Get protectedTicket from refreshToken class
-            //    context.DeserializeTicket(refreshToken.NewToken);
-            //    var result = refreshTokenRepo.Delete(x => x.NewTokenKey == hashedTokenId);
-            //    return;
-            //}
-            //await Task.FromResult(true);
-        }
-
-
-        public static string GetHash(string input)
-        {
-
-            HashAlgorithm hashAlgorithm = new SHA256CryptoServiceProvider();
-
-            byte[] byteValue = System.Text.Encoding.UTF8.GetBytes(input);
-
-            byte[] byteHash = hashAlgorithm.ComputeHash(byteValue);
-
-            return Convert.ToBase64String(byteHash);
+            return Task.FromResult<object>(null);
         }
 
         public void Create(AuthenticationTokenCreateContext context)

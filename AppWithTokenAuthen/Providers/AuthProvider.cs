@@ -27,7 +27,7 @@ namespace AppWithTokenAuthen.Providers
 
 
 
-        public override async Task ValidateClientAuthentication(OAuthValidateClientAuthenticationContext context)
+        public override Task ValidateClientAuthentication(OAuthValidateClientAuthenticationContext context)
         {
             if (!context.TryGetBasicCredentials(out var clientId, out var clientSecret))
                 context.TryGetFormCredentials(out clientId, out clientSecret);
@@ -35,53 +35,80 @@ namespace AppWithTokenAuthen.Providers
             if (string.IsNullOrWhiteSpace(clientId))
             {
                 context.SetError("invalid_client", "Client Id should be sent.");
-                return;
+                return Task.FromResult<object>(null);
             }
 
             if (string.IsNullOrWhiteSpace(clientSecret))
             {
                 context.SetError("invalid_client", "Client Secret should be sent.");
-                return;
+                return Task.FromResult<object>(null);
             }
 
             if (!_entities.Token_Audience.Any(w => w.Client_Id == clientId && w.Client_Secret == clientSecret))
             {
                 context.SetError("invalid_client", "Client Id with Client Secret is not match.");
-                return;
+                return Task.FromResult<object>(null);
             }
 
             context.Validated();
+            return Task.FromResult<object>(null);
         }
 
-        public override async Task GrantResourceOwnerCredentials(OAuthGrantResourceOwnerCredentialsContext context)
+        public override Task GrantResourceOwnerCredentials(OAuthGrantResourceOwnerCredentialsContext context)
         {
             if (!_entities.User.Any(a => a.Username == context.UserName && a.Password == context.Password))
             {
+                // check valid user login
                 context.SetError("invalid_grant", "The username or password is incorrect.");
-                return;
+                return Task.FromResult<object>(null);
             }
 
+            // remove Refresh Token of previously user login.
+            _entities.Refresh_Token.RemoveRange(_entities.Refresh_Token.Where(w => w.Username == context.UserName));
+            _entities.SaveChanges();
+            
 
-            context.OwinContext.Response.Headers.Add("Access-Control-Allow-Origin", new[] { "*" });
+            var allowedOrigin = context.OwinContext.Get<string>("as:clientAllowedOrigin");
 
-            string guid = Guid.NewGuid().ToString("n");
+            if (allowedOrigin == null)
+                allowedOrigin = "*";
+
+            context.OwinContext.Response.Headers.Add("Access-Control-Allow-Origin", new[] { allowedOrigin });
+
+
+            string access_token_guid = Guid.NewGuid().ToString("n");
 
             ClaimsIdentity claimsIdentity = new ClaimsIdentity(context.Options.AuthenticationType, TokenClaim.userName, TokenClaim.role);
-            claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Jti, guid));
+            claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Jti, access_token_guid));
             claimsIdentity.AddClaim(new Claim(TokenClaim.userName, context.UserName));
             claimsIdentity.AddClaim(new Claim(TokenClaim.role, "user"));
 
 
             var dictionaryItem = new Dictionary<string, string>();
             dictionaryItem.Add("as:userName", context.UserName);
-            dictionaryItem.Add("as:guid", guid);
+            dictionaryItem.Add("as:access_token_guid", access_token_guid);
             dictionaryItem.Add("as:audience", context.ClientId);
 
             var props = new AuthenticationProperties(dictionaryItem);
             var ticket = new AuthenticationTicket(claimsIdentity, props);
 
+
             context.Validated(ticket);
+            return Task.FromResult<object>(null);
         }
+
+        // *** use to add additional property into Token Response (optional) ***
+
+        //public override Task TokenEndpoint(OAuthTokenEndpointContext context)
+        //{
+        //    // use to add additional property into Token Response
+        //    foreach (KeyValuePair<string, string> property in context.Properties.Dictionary)
+        //    {
+        //        context.AdditionalResponseParameters.Add(property.Key, property.Value);
+        //    }
+
+        //    return Task.FromResult<object>(null);
+        //}
     }
 
 

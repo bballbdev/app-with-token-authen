@@ -14,4 +14,10 @@ namespace AppWithTokenAuthen.Constants
         public const string userName = "userName";
         public const string role = "role";
     }
+
+    public class Roles
+    {
+        public const string admin = "admin";
+        public const string user = "user";
+    }
 }

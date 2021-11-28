@@ -27,5 +27,7 @@ namespace AppWithTokenAuthen.Database
     
         public virtual DbSet<User> User { get; set; }
         public virtual DbSet<Token_Audience> Token_Audience { get; set; }
+        public virtual DbSet<User_Role> User_Role { get; set; }
+        public virtual DbSet<Refresh_Token> Refresh_Token { get; set; }
     }
 }

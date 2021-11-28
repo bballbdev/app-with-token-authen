@@ -12,19 +12,12 @@ namespace AppWithTokenAuthen.Database
     using System;
     using System.Collections.Generic;
     
-    public partial class User
+    public partial class Refresh_Token
     {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
-        public User()
-        {
-            this.User_Role = new HashSet<User_Role>();
-        }
-    
-        public int User_Id { get; set; }
+        public string Refresh_Token_Id { get; set; }
+        public string Refresh_Token1 { get; set; }
         public string Username { get; set; }
-        public string Password { get; set; }
-    
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<User_Role> User_Role { get; set; }
+        public System.DateTime Issued_At_Utc { get; set; }
+        public System.DateTime Expired_At_Utc { get; set; }
     }
 }

@@ -164,10 +164,16 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>MyAppEntities.edmx</DependentUpon>
     </Compile>
+    <Compile Include="Database\Refresh_Token.cs">
+      <DependentUpon>MyAppEntities.tt</DependentUpon>
+    </Compile>
     <Compile Include="Database\Token_Audience.cs">
       <DependentUpon>MyAppEntities.tt</DependentUpon>
     </Compile>
     <Compile Include="Database\User.cs">
+      <DependentUpon>MyAppEntities.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Database\User_Role.cs">
       <DependentUpon>MyAppEntities.tt</DependentUpon>
     </Compile>
     <Compile Include="Global.asax.cs">
